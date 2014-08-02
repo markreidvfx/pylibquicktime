@@ -1,5 +1,5 @@
 
-from libc.stdint cimport uint32_t
+from libc.stdint cimport uint32_t, int64_t
 
 cdef extern from "lqt.h" :
     ctypedef struct  quicktime_t:
@@ -13,6 +13,14 @@ cdef extern from "lqt.h" :
     
     #quicktime.h
     int quicktime_video_tracks(quicktime_t *file)
+    int quicktime_video_width(quicktime_t *file, int track)
+    int quicktime_video_height(quicktime_t *file, int track)
+    int lqt_video_time_scale(quicktime_t * file, int track)
+    double quicktime_frame_rate(quicktime_t *file, int track)
+    long quicktime_video_length(quicktime_t *file, int track)
+    int64_t lqt_video_duration(quicktime_t * file, int track)
+    int quicktime_video_depth(quicktime_t *file, int track)
+    
     int quicktime_audio_tracks(quicktime_t *file)
         
 
