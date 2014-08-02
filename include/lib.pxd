@@ -12,6 +12,8 @@ cdef extern from "lqt.h" :
     
     
     #quicktime.h
+    
+    # Video
     int quicktime_video_tracks(quicktime_t *file)
     int quicktime_video_width(quicktime_t *file, int track)
     int quicktime_video_height(quicktime_t *file, int track)
@@ -21,10 +23,18 @@ cdef extern from "lqt.h" :
     int64_t lqt_video_duration(quicktime_t * file, int track)
     int quicktime_video_depth(quicktime_t *file, int track)
     
+    #  Audio
     int quicktime_audio_tracks(quicktime_t *file)
+    int quicktime_track_channels(quicktime_t *file, int track)
+    long quicktime_sample_rate(quicktime_t *file, int track)
+    long quicktime_audio_length(quicktime_t *file, int track)
+    int quicktime_audio_bits(quicktime_t *file, int track)
         
+    # Text
+    int lqt_text_tracks(quicktime_t *file)     
 
-    #Timecodes
+
+    # Timecodes
     int LQT_TIMECODE_DROP
     int LQT_TIMECODE_24HMAX
     int LQT_TIMECODE_NEG_OK

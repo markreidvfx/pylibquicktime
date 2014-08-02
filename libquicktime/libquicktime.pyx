@@ -38,9 +38,40 @@ cdef class InputVideoTrack(Track):
     property depth:
         def __get__(self):
             return lib.quicktime_video_depth(self.qt.ptr, self.index)
+    
+    def __repr__(self):
+        return '<av.%s #%d, %dx%d %f fps at 0x%x>' % (
+            self.__class__.__name__,
+            self.index,
+            self.width,
+            self.height,
+            self.frame_rate,
+            id(self),
+        )
 
 cdef class InputAudioTrack(Track):
-    pass
+    
+    property channels:
+        def __get__(self):
+            return lib.quicktime_track_channels(self.qt.ptr, self.index)
+    property sample_rate:
+        def __get__(self):
+            return lib.quicktime_sample_rate(self.qt.ptr, self.index)
+    property length:
+        def __get__(self):
+            return lib.quicktime_audio_length(self.qt.ptr, self.index)
+    property bits:
+        def __get__(self):
+            return lib.quicktime_audio_bits(self.qt.ptr, self.index)
+        
+    def __repr__(self):
+        return '<av.%s  %d, %d samples at %dHz at 0x%x>' % (
+            self.__class__.__name__,
+            self.index,
+            self.length,
+            self.sample_rate,
+            id(self),
+        )
 
 cdef class InputTextTrack(Track):
     pass
@@ -71,6 +102,9 @@ cdef class TrackList(object):
     
     cdef int _get_len(self):
         raise NotImplementedError()
+    
+    def __repr__(self):
+        return repr(list(self))
         
     
 cdef class InputVideoTrackList(TrackList):
@@ -82,10 +116,18 @@ cdef class InputVideoTrackList(TrackList):
         return lib.quicktime_video_tracks(self.qt.ptr)
 
 cdef class InputAudioTrackList(TrackList):
-    pass
+    cdef _get_track(self, int index):
+        return InputAudioTrack.__new__(InputAudioTrack, self.qt, index)
+        
+    cdef int _get_len(self):
+        return lib.quicktime_audio_tracks(self.qt.ptr)
 
 cdef class InputTextTrackList(TrackList):
-    pass
+    cdef _get_track(self, int index):
+        return InputTextTrack.__new__(InputTextTrack, self.qt, index)
+        
+    cdef int _get_len(self):
+        return lib.lqt_text_tracks(self.qt.ptr)
 
 
 
