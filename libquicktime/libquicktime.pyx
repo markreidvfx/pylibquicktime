@@ -10,6 +10,7 @@ cdef class Track(object):
         
     def __init__(self):
         raise TypeError("%s cannot be instantiated from Python" %  self.__class__.__name__)
+    
 
 cdef class InputVideoTrack(Track):
     
@@ -38,6 +39,22 @@ cdef class InputVideoTrack(Track):
     property depth:
         def __get__(self):
             return lib.quicktime_video_depth(self.qt.ptr, self.index)
+        
+    property tape_name:
+        def __get__(self):
+            cdef char* name= lib.lqt_get_timecode_tape_name(self.qt.ptr, self.index)
+            if name:
+                return name
+            
+    property timecode:
+        def __get__(self):
+            cdef uint32_t timecode = 0
+            cdef int result
+            
+            result = lib.lqt_read_timecode(self.qt.ptr, self.index, &timecode)
+            if result:
+                return timecode
+            
     
     def __repr__(self):
         return '<av.%s #%d, %dx%d %f fps at 0x%x>' % (
@@ -136,6 +153,9 @@ cdef class Quicktime(object):
     def __cinit__(self):
         self.ptr = NULL
         
+    def close(self):
+        lib.quicktime_close(self.ptr)
+        
 cdef class QuicktimeReader(Quicktime):
     def __init__(self, bytes path):
         self.ptr = lib.quicktime_open(path, 1, 0)
@@ -152,28 +172,63 @@ cdef class QuicktimeReader(Quicktime):
         def __get__(self):
             return  InputTextTrackList.__new__(InputTextTrackList, self)
         
+    property copyright:
+        def __get__(self):        
+            cdef char* value = lib.quicktime_get_copyright(self.ptr)
+            if value:
+                return value
+    property name:
+        def __get__(self):
+            cdef char* value = lib.quicktime_get_name(self.ptr)
+            if value:
+                return value
+    property info:
+        def __get__(self):
+            cdef char *value = lib.quicktime_get_info(self.ptr)
+            if value:
+                return value
+    property album:
+        def __get__(self):
+            cdef char *value = lib.lqt_get_album(self.ptr)
+            if value:
+                return value
+    property artist:
+        def __get__(self):
+            cdef char *value = lib.lqt_get_artist(self.ptr)
+            if value:
+                return value
+    property genre:
+        def __get__(self):
+            cdef char *value = lib.lqt_get_genre(self.ptr)
+            if value:
+                return value
+    property track:
+        def __get__(self):
+            cdef char *value
+            value = lib.lqt_get_track(self.ptr)
+            if value:
+                return value
+    property comment:
+        def __get__(self):
+            cdef char *value = lib.lqt_get_comment(self.ptr)
+            if value:
+                return value
+    property author:
+        def __get__(self):
+            cdef char *value = lib.lqt_get_author(self.ptr)
+            if value:
+                return value
+    property creation_time:
+        def __get__(self):
+            return lib.lqt_get_creation_time(self.ptr)
+
     def dump(self):
         lib.quicktime_dump(self.ptr)
         
-    def tape_names(self):
-        cdef char* name
-        
-        name = lib.lqt_get_timecode_tape_name(self.ptr, 0)
-        if name:
-            return name
-    
-    def timecode(self):
-        cdef uint32_t timecode = 0
-        cdef int result
-        
-        result = lib.lqt_read_timecode(self.ptr, 0, &timecode)
-        if result:
-            return timecode
         
 cdef class QuicktimeWriter(QuicktimeReader):
     def __init__(self, bytes path):
         self.ptr = lib.quicktime_open(path, 0, 1)
-        
 
 def open(path, mode = 'r'):
     if mode == 'r':

@@ -32,6 +32,28 @@ cdef extern from "lqt.h" :
         
     # Text
     int lqt_text_tracks(quicktime_t *file)     
+    
+    # MetaData
+    char* quicktime_get_copyright(quicktime_t *file)
+    char* quicktime_get_name(quicktime_t *file)
+    char* quicktime_get_info(quicktime_t *file)
+    char * lqt_get_album(quicktime_t * file)
+    char * lqt_get_artist(quicktime_t * file)
+    char * lqt_get_genre(quicktime_t * file)
+    char * lqt_get_track(quicktime_t * file)
+    char * lqt_get_comment(quicktime_t *file)
+    char * lqt_get_author(quicktime_t *file)
+    unsigned long lqt_get_creation_time (quicktime_t *file)
+
+    void quicktime_set_copyright(quicktime_t *file, char *string)
+    void quicktime_set_name(quicktime_t *file, char *string)
+    void quicktime_set_info(quicktime_t *file, char *string)
+    void lqt_set_album(quicktime_t *file, char *string)
+    void lqt_set_artist(quicktime_t *file, char *string)
+    void lqt_set_genre(quicktime_t *file, char *string)
+    void lqt_set_track(quicktime_t *file, char *string)
+    void lqt_set_comment(quicktime_t *file, char *string)
+    void lqt_set_author(quicktime_t *file, char *string)
 
 
     # Timecodes
