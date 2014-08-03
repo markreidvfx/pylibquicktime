@@ -1,9 +1,35 @@
 
-from libc.stdint cimport uint32_t, int64_t
+from libc.stdint cimport uint8_t, uint32_t, int64_t
 
 cdef extern from "lqt.h" :
-    ctypedef struct  quicktime_t:
+    ctypedef struct quicktime_t:
         pass
+    
+    ctypedef struct lqt_codec_info_t:
+        pass
+    
+    cdef enum lqt_compression_id_t:
+        pass
+    
+    ctypedef struct lqt_compression_info_t:
+        lqt_compression_id_t id
+        int flags
+        int global_header_len
+        uint8_t * global_header
+        
+        int bitrate
+        
+        # Audio format
+        int samplerate
+        int num_channels
+        
+        # Video format
+        int width
+        int height
+        int pixel_width
+        int pixel_height
+        int colormodel
+        int video_timescale
     
     quicktime_t* quicktime_open(char *filename, int rd, int wr)
     int quicktime_close(quicktime_t *file)     
@@ -22,6 +48,8 @@ cdef extern from "lqt.h" :
     long quicktime_video_length(quicktime_t *file, int track)
     int64_t lqt_video_duration(quicktime_t * file, int track)
     int quicktime_video_depth(quicktime_t *file, int track)
+    
+    int quicktime_supported_video(quicktime_t *file, int track)    
     
     #  Audio
     int quicktime_audio_tracks(quicktime_t *file)
@@ -71,3 +99,19 @@ cdef extern from "lqt.h" :
     void lqt_set_timecode_tape_name(quicktime_t *file, int track, const char *tapename)
     int  lqt_get_timecode_track_enabled(quicktime_t *file, int track)
     void lqt_set_timecode_track_enabled(quicktime_t *file, int track, int enabled)
+    
+    # Codecs
+    lqt_codec_info_t **lqt_query_registry(int audio, int video, int encode, int decode)
+    lqt_codec_info_t **lqt_audio_codec_from_file(quicktime_t *file, int track)
+    lqt_codec_info_t **lqt_video_codec_from_file(quicktime_t *file, int track)
+    void lqt_destroy_codec_info (lqt_codec_info_t **info)
+    void lqt_dump_codec_info(lqt_codec_info_t *info)
+    
+    # Compression Info
+    void lqt_compression_info_copy(lqt_compression_info_t * dst, const lqt_compression_info_t * src)
+    lqt_compression_info_t * lqt_get_audio_compression_info(quicktime_t * file, int track)
+    lqt_compression_info_t * lqt_get_video_compression_info(quicktime_t * file, int track)
+    void lqt_compression_info_dump(lqt_compression_info_t * ci)
+    lqt_compression_info_t * lqt_get_video_compression_info(quicktime_t * file, int track)
+    void lqt_compression_info_free(lqt_compression_info_t * info)
+    

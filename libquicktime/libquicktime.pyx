@@ -2,6 +2,9 @@
 from libc.stdint cimport uint32_t
 cimport lib
 
+#cdef lib.lqt_codec_info_t **audio_encoders =  lib.lqt_query_registry(1, 0, 1, 0)
+#cdef lib.lqt_codec_info_t **video_encoders =  lib.lqt_query_registry(0, 1, 1, 0)
+
 cdef class Track(object):
 
     def __cinit__(self, Quicktime qt = None, int index = 0):
@@ -11,6 +14,7 @@ cdef class Track(object):
     def __init__(self):
         raise TypeError("%s cannot be instantiated from Python" %  self.__class__.__name__)
     
+# Input Tracks
 
 cdef class InputVideoTrack(Track):
     
@@ -54,7 +58,13 @@ cdef class InputVideoTrack(Track):
             result = lib.lqt_read_timecode(self.qt.ptr, self.index, &timecode)
             if result:
                 return timecode
-            
+    
+    property compression:
+        def __get__(self):
+            cdef CompressionInfo compression = CompressionInfo.__new__(CompressionInfo)
+            compression.ptr = lib.lqt_get_video_compression_info(self.qt.ptr, self.index)
+            if compression.ptr:
+                return compression
     
     def __repr__(self):
         return '<av.%s #%d, %dx%d %f fps at 0x%x>' % (
@@ -81,6 +91,13 @@ cdef class InputAudioTrack(Track):
         def __get__(self):
             return lib.quicktime_audio_bits(self.qt.ptr, self.index)
         
+    property compression:
+        def __get__(self):
+            cdef CompressionInfo compression = CompressionInfo.__new__(CompressionInfo)
+            compression.ptr = lib.lqt_get_audio_compression_info(self.qt.ptr, self.index)
+            if compression.ptr:
+                return compression
+        
     def __repr__(self):
         return '<av.%s  %d, %d samples at %dHz at 0x%x>' % (
             self.__class__.__name__,
@@ -91,6 +108,17 @@ cdef class InputAudioTrack(Track):
         )
 
 cdef class InputTextTrack(Track):
+    pass
+
+# Output Tracks
+
+cdef class OutputVideoTrack(InputVideoTrack):
+    pass
+
+cdef class OutputAudioTrack(InputAudioTrack):
+    pass
+
+cdef class OutputTextTrack(InputTextTrack):
     pass
 
 cdef class TrackList(object):
@@ -123,7 +151,8 @@ cdef class TrackList(object):
     def __repr__(self):
         return repr(list(self))
         
-    
+# Input TrackLists
+  
 cdef class InputVideoTrackList(TrackList):
     
     cdef _get_track(self, int index):
@@ -138,7 +167,7 @@ cdef class InputAudioTrackList(TrackList):
         
     cdef int _get_len(self):
         return lib.quicktime_audio_tracks(self.qt.ptr)
-
+    
 cdef class InputTextTrackList(TrackList):
     cdef _get_track(self, int index):
         return InputTextTrack.__new__(InputTextTrack, self.qt, index)
@@ -146,7 +175,41 @@ cdef class InputTextTrackList(TrackList):
     cdef int _get_len(self):
         return lib.lqt_text_tracks(self.qt.ptr)
 
+# Output TrackLists
+    
+cdef class OutputVideoTrackList(InputVideoTrackList):
+    
+    cdef _get_track(self, int index):
+        return OutputVideoTrack.__new__(OutputVideoTrack, self.qt, index)
 
+cdef class OutputAudioTrackList(InputAudioTrackList):
+    cdef _get_track(self, int index):
+        return OutputAudioTrack.__new__(OutputAudioTrack, self.qt, index)
+
+cdef class  OutputTextTrackList(InputTextTrackList):
+    cdef _get_track(self, int index):
+        return OutputTextTrack.__new__(OutputTextTrack, self.qt, index)
+    
+cdef class CompressionInfo(object):
+    def __cinit__(self):
+        self.ptr = NULL
+    def __init__(self):
+        raise TypeError("%s cannot be instantiated from Python" %  self.__class__.__name__)
+    
+    def dump(self):
+        lib.lqt_compression_info_dump(self.ptr)
+    
+    def __dealloc__(self):
+        if self.ptr:
+            lib.lqt_compression_info_free(self.ptr)
+            
+    
+cdef class Codec(object):
+    def __cinit__(self):
+        self.ptr = NULL
+        
+    def __init__(self):
+        raise TypeError("%s cannot be instantiated from Python" %  self.__class__.__name__)
 
 cdef class Quicktime(object):
 
@@ -229,6 +292,27 @@ cdef class QuicktimeReader(Quicktime):
 cdef class QuicktimeWriter(QuicktimeReader):
     def __init__(self, bytes path):
         self.ptr = lib.quicktime_open(path, 0, 1)
+        
+    def copy_setting(self, Quicktime not None):
+        pass
+        
+    property video_tracks:
+        def __get__(self):
+            return OutputVideoTrackList.__new__(OutputVideoTrackList, self)
+        
+    property audio_tracks:
+        def __get__(self):
+            return OutputVideoTrackList.__new__(OutputAudioTrackList, self)
+    
+    property text_tracks:
+        def __get__(self):
+            return  OutputVideoTrackList.__new__(OutputTextTrackList, self)
+        
+    property name:
+        def __get__(self):
+            return super(QuicktimeWriter, self).name
+        def __set__(self, bytes value):
+            lib.quicktime_set_name(self.ptr, value)
 
 def open(path, mode = 'r'):
     if mode == 'r':

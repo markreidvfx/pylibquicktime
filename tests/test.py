@@ -17,6 +17,9 @@ print q.video_tracks[0].duration
 print q.video_tracks[0].timecode
 print q.video_tracks[0].tape_name
 
+print q.video_tracks[0].compression.dump()
 
 q2 = libquicktime.open("test2.mov", 'w')
+q2.name = "weee"
+print q2.name
 q2.close()

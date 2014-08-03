@@ -22,6 +22,15 @@ cdef class InputAudioTrack(Track):
 cdef class InputTextTrack(Track):
     pass
 
+cdef class OutputVideoTrack(InputVideoTrack):
+    pass
+
+cdef class OutputAudioTrack(InputAudioTrack):
+    pass
+
+cdef class OutputTextTrack(InputTextTrack):
+    pass
+
     
 cdef class TrackList(object):
     cdef readonly Quicktime qt
@@ -37,3 +46,18 @@ cdef class InputAudioTrackList(TrackList):
 
 cdef class InputTextTrackList(TrackList):
     pass
+
+cdef class OutputVideoTrackList(InputVideoTrackList):
+    pass
+
+cdef class OutputAudioTrackList(InputAudioTrackList):
+    pass
+
+cdef class OutputTextTrackList(InputTextTrackList):
+    pass
+
+cdef class CompressionInfo(object):
+    cdef lib.lqt_compression_info_t *ptr
+
+cdef class Codec(object):
+    cdef lib.lqt_codec_info_t *ptr
