@@ -67,7 +67,13 @@ cdef class InputVideoTrack(Track):
                 break
             
         #lqt_read_video_packet
-    
+    def has_timecode(self):
+        cdef uint32_t flags
+        cdef int framerate 
+        if lib.lqt_has_timecode_track(self.qt.ptr, self.index, &flags, &framerate):
+            return framerate, flags
+        
+        return None, None
     property width:
         def __get__(self):
             return lib.quicktime_video_width(self.qt.ptr, self.index)

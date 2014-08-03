@@ -21,6 +21,8 @@ print q.video_tracks[0].tape_name
 print q.video_tracks[0].codec
 print q.video_tracks[0].codec
 
+print "timecode", q.video_tracks[0].has_timecode()
+
 q2 = libquicktime.open("test2.mov", 'w')
 q2.name = "weee"
 
