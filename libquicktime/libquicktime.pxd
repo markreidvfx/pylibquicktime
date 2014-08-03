@@ -56,8 +56,18 @@ cdef class OutputAudioTrackList(InputAudioTrackList):
 cdef class OutputTextTrackList(InputTextTrackList):
     pass
 
+cdef class CodecList(object):
+    cdef lib.lqt_codec_info_t **a_ptr
+    cdef lib.lqt_codec_info_t **v_ptr
+    
+    cdef object find_audio_encoder_by_compression_id(self, CompressionInfo compression)
+    cdef object find_video_encoder_by_compression_id(self, CompressionInfo compression)
+
 cdef class CompressionInfo(object):
     cdef lib.lqt_compression_info_t *ptr
 
 cdef class Codec(object):
     cdef lib.lqt_codec_info_t *ptr
+    
+cdef class Packet(object):
+    cdef lib.lqt_packet_t ptr

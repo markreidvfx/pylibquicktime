@@ -1,9 +1,47 @@
 
 from libc.stdint cimport uint32_t
+from libc.string cimport memset
 cimport lib
 
-#cdef lib.lqt_codec_info_t **audio_encoders =  lib.lqt_query_registry(1, 0, 1, 0)
-#cdef lib.lqt_codec_info_t **video_encoders =  lib.lqt_query_registry(0, 1, 1, 0)
+
+cdef class CodecList(object):
+    def __cinit__(self):
+        self.a_ptr = lib.lqt_query_registry(1, 0, 1, 0)
+        self.v_ptr =  lib.lqt_query_registry(0, 1, 1, 0)
+        
+    def __init__(self):
+        raise TypeError("%s cannot be instantiated from Python" %  self.__class__.__name__)
+    
+    cdef object find_audio_encoder_by_compression_id(self, CompressionInfo compression):
+        cdef int i = 0
+        cdef Codec codec = Codec.__new__(Codec)
+        while self.a_ptr[i]:
+            if self.a_ptr[i].compression_id == compression.ptr.id:
+                codec.ptr = self.a_ptr[i]
+                return codec    
+            i += 1
+        
+        return None
+        
+    cdef object find_video_encoder_by_compression_id(self, CompressionInfo compression):
+        cdef int i = 0
+        cdef Codec codec = Codec.__new__(Codec)
+        
+        while self.v_ptr[i]:
+            if self.v_ptr[i].compression_id == compression.ptr.id:
+                codec.ptr = self.v_ptr[i]
+                return codec
+            
+            i += 1
+        
+        return None
+    
+    def __dealloc__(self):
+        lib.lqt_destroy_codec_info(self.a_ptr)
+        lib.lqt_destroy_codec_info(self.v_ptr)
+        
+cdef CodecList codecs = CodecList.__new__(CodecList)
+            
 
 cdef class Track(object):
 
@@ -17,6 +55,18 @@ cdef class Track(object):
 # Input Tracks
 
 cdef class InputVideoTrack(Track):
+
+
+    def iter_packets(self):
+        cdef Packet packet
+        while True:
+            packet = Packet.__new__(Packet)
+            if lib.lqt_read_video_packet(self.qt.ptr, &packet.ptr, self.index):
+                yield packet
+            else:
+                break
+            
+        #lqt_read_video_packet
     
     property width:
         def __get__(self):
@@ -66,6 +116,12 @@ cdef class InputVideoTrack(Track):
             if compression.ptr:
                 return compression
     
+    property codec:
+        def __get__(self):
+            cdef CompressionInfo compression = self.compression
+            if compression:
+                return compression.codec
+    
     def __repr__(self):
         return '<av.%s #%d, %dx%d %f fps at 0x%x>' % (
             self.__class__.__name__,
@@ -113,10 +169,32 @@ cdef class InputTextTrack(Track):
 # Output Tracks
 
 cdef class OutputVideoTrack(InputVideoTrack):
-    pass
-
+    
+    def write_packet(self, Packet packet not None):
+        return lib.lqt_write_video_packet(self.qt.ptr, &packet.ptr, self.index)
+    
+    def add_timecode(self, int frame_rate, drop=False):
+        cdef  uint32_t flags = lib.LQT_TIMECODE_COUNTER
+        lib.lqt_add_timecode_track(self.qt.ptr, self.index, flags, frame_rate)
+        
+    property timecode:
+        def __get__(self):
+            return super(OutputVideoTrack, self).timecode
+        def __set__(self, uint32_t value):
+            lib.lqt_write_timecode(self.qt.ptr, self.index, value)
+            
+    property tape_name:
+        def __get__(self):
+            return super(OutputVideoTrack, self).name
+        def __set__(self, bytes value not None):
+            # if doesn't have timecode will segfault
+            
+            cdef char* name = value
+            lib.lqt_set_timecode_tape_name(self.qt.ptr, self.index, name)
+            
 cdef class OutputAudioTrack(InputAudioTrack):
-    pass
+    def write_packet(self, Packet packet not None):
+        return lib.lqt_write_audio_packet(self.qt.ptr, &packet.ptr, self.index)
 
 cdef class OutputTextTrack(InputTextTrack):
     pass
@@ -198,11 +276,23 @@ cdef class CompressionInfo(object):
     
     def dump(self):
         lib.lqt_compression_info_dump(self.ptr)
+        
+    property codec:
+        def __get__(self):
+            return codecs.find_video_encoder_by_compression_id(self)
     
     def __dealloc__(self):
-        if self.ptr:
-            lib.lqt_compression_info_free(self.ptr)
-            
+        pass
+        # this leaks ???
+        #if self.ptr:
+        #    lib.lqt_compression_info_free(self.ptr)
+        
+cdef class Packet(object):
+    def __cinit__(self):
+        memset(&self.ptr, 0, sizeof(self.ptr))  
+        
+    def __init__(self):
+        raise TypeError("%s cannot be instantiated from Python" %  self.__class__.__name__)      
     
 cdef class Codec(object):
     def __cinit__(self):
@@ -292,9 +382,26 @@ cdef class QuicktimeReader(Quicktime):
 cdef class QuicktimeWriter(QuicktimeReader):
     def __init__(self, bytes path):
         self.ptr = lib.quicktime_open(path, 0, 1)
+            
+    def add_video_track_compressed(self, CompressionInfo compresson not None):
         
-    def copy_setting(self, Quicktime not None):
-        pass
+        cdef Codec codec = compresson.codec
+        if not codec:
+            raise ValueError()
+        
+        # need to find out what the return codes mean
+        lib.lqt_add_video_track_compressed(self.ptr, compresson.ptr, codec.ptr)
+        return self.video_tracks[-1]
+    
+    def add_audio_track_comressed(self, CompressionInfo compresson not None):
+        
+        cdef Codec codec = compresson.codec
+        if not codec:
+            raise ValueError()
+        
+        # need to find out what the return codes mean
+        lib.lqt_add_audio_track_compressed(self.ptr, compresson.ptr, codec.ptr)
+        return self.audio_tracks[-1]
         
     property video_tracks:
         def __get__(self):
